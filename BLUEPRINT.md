@@ -54,18 +54,20 @@ Narrative: engineer who connects data and models to decisions and production sys
 - Accessible: color never alone, alt text on images, contrast ≥ WCAG AA, keyboard navigable.
 - Project cards include a metric ("NDCG@10 0.775", "mAP@0.5", "recall under blur") rather than only prose.
 
-## Tech stack decision (spike: one of each)
+## Tech stack — DECIDED: Astro
 
-Build a small identical slice in **Astro** and in **Next.js**, then compare and pick one.
+Built an identical slice (nav + hero + 3 project cards) in Astro and Next.js (static export), then measured. **Astro wins decisively for this use case.**
 
-| | Astro | Next.js |
+| Metric | Astro | Next.js |
 | --- | --- | --- |
-| Output | static HTML + minimal JS ("islands") | React; static export possible |
-| SEO | excellent (pre-rendered) | good (SSG/SSR) |
-| Interactivity | islands for theme/filter | full React |
-| Bundle/baseline | smallest | larger |
+| Total output | 4.9 KB (3 files) | 1.2 MB (29 files) |
+| JavaScript shipped | 0 KB | 1.13 MB |
+| Pre-rendered HTML (SEO) | yes | yes |
+| Build time | ~7s | ~21s |
 
-Comparison criteria: developer experience, output size, build time, perceived interactivity, and ease of content updates (Markdown collections vs React components). Recommendation bias: **Astro** for a content-heavy, SEO-critical landing page; Next.js if the user prefers a React codebase.
+Astro ships pure HTML/CSS for static content and only adds JS on "islands" where interactivity is needed (theme toggle, project filtering). Next.js ships the React runtime even for a fully static page. For a mobile-first, SEO-critical CV landing page, Astro is the right default.
+
+Stack: Astro + Tailwind CSS + Astro content collections (Markdown for projects). Interactivity via small client islands only where needed.
 
 ## Hosting & deployment
 
