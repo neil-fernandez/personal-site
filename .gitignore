@@ -19,3 +19,6 @@ out/
 
 # Logs
 *.log
+
+# Generated review screenshots
+reports/
