@@ -5,5 +5,6 @@ import sitemap from "@astrojs/sitemap";
 
 export default defineConfig({
   site: "https://neilf.org",
+  trailingSlash: "never",
   integrations: [tailwind(), sitemap()],
 });
