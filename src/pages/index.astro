@@ -4,7 +4,9 @@ import Nav from "../components/Nav.astro";
 import ProjectCard from "../components/ProjectCard.astro";
 import { getCollection } from "astro:content";
 
-const projects = (await getCollection("projects")).filter((p) => p.data.featured);
+const allProjects = await getCollection("projects");
+const featured = allProjects.filter((p) => p.data.featured);
+const coursework = allProjects.filter((p) => !p.data.featured);
 ---
 
 <Layout
@@ -42,17 +44,58 @@ const projects = (await getCollection("projects")).filter((p) => p.data.featured
     <section id="projects" class="py-8">
       <h2 class="text-2xl font-semibold">Projects</h2>
       <div class="mt-6 grid gap-5 sm:grid-cols-2">
-        {projects.map((project) => <ProjectCard project={project} />)}
+        {featured.map((project) => <ProjectCard project={project} />)}
       </div>
+    </section>
+
+    <section id="coursework" class="py-8">
+      <h2 class="text-2xl font-semibold">Coursework</h2>
+      <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+        Selected academic work across software concepts, data, and machine learning.
+      </p>
+      <ul class="mt-6 space-y-4">
+        {
+          coursework.map((project) => (
+            <li class="border-b border-slate-200 pb-4 last:border-0 dark:border-slate-800">
+              <div class="flex flex-wrap items-baseline justify-between gap-x-4">
+                <h3 class="font-semibold">{project.data.title}</h3>
+                <span class="text-xs text-slate-500 dark:text-slate-400">{project.data.domain}</span>
+              </div>
+              <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">{project.data.description}</p>
+              {
+                project.data.topics && (
+                  <ul class="mt-2 list-inside list-disc text-xs text-slate-500 dark:text-slate-400">
+                    {project.data.topics.map((topic) => <li>{topic}</li>)}
+                  </ul>
+                )
+              }
+              <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                {project.data.tech.join(" · ")}
+              </p>
+            </li>
+          ))
+        }
+      </ul>
     </section>
 
     <section id="contact" class="py-8">
       <h2 class="text-2xl font-semibold">Contact</h2>
-      <p class="mt-4 text-slate-700 dark:text-slate-300">
-        <a href="mailto:hello@neilf.org" class="text-brand-600 underline-offset-2 hover:underline">
-          hello@neilf.org
-        </a>
-      </p>
+      <ul class="mt-4 space-y-2 text-slate-700 dark:text-slate-300">
+        <li>
+          <a href="mailto:nfern2@gmail.com" class="text-brand-600 underline-offset-2 hover:underline">
+            nfern2@gmail.com
+          </a>
+        </li>
+        <li>
+          <a
+            href="http://au.linkedin.com/in/nkfernandez"
+            rel="noopener"
+            class="text-brand-600 underline-offset-2 hover:underline"
+          >
+            LinkedIn
+          </a>
+        </li>
+      </ul>
     </section>
   </main>
 </Layout>
