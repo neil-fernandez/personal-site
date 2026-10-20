@@ -1,9 +1,9 @@
 ---
 title: Data Dashboard
 domain: Data visualisation
-description: Built an interactive dashboard for exploring data.
-tech: [Python]
+description: Built interactive data dashboards with Plotly, Dash, and Streamlit.
+tech: [Python, Plotly, Dash, Streamlit]
 category: data
 featured: false
 ---
-Built a data dashboard to explore and visualise a dataset.
+Built interactive data dashboards to explore and visualise data using Plotly, Dash, and Streamlit.

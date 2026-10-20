@@ -1,9 +1,9 @@
 ---
 const links = [
-  ["About", "#about"],
-  ["Projects", "#projects"],
-  ["Coursework", "#coursework"],
-  ["Contact", "#contact"],
+  ["About", "/#about", ""],
+  ["Projects", "/#projects", ""],
+  ["Coursework", "/#coursework", "hidden sm:inline"],
+  ["Contact", "/#contact", "hidden sm:inline"],
 ];
 ---
 
@@ -25,10 +25,10 @@ const links = [
           fill="#fff">NF</text>
       </svg>
     </a>
-    <div class="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-300">
+    <div class="flex items-center gap-3 text-sm text-slate-600 sm:gap-4 dark:text-slate-300">
       {
-        links.map(([label, href]) => (
-          <a href={href} class="transition-colors hover:text-brand-600">{label}</a>
+        links.map(([label, href, className]) => (
+          <a href={href} class={`transition-colors hover:text-brand-600 ${className}`}>{label}</a>
         ))
       }
       <button

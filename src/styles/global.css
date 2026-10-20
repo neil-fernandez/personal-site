@@ -21,3 +21,30 @@ html {
     scroll-behavior: auto;
   }
 }
+
+.story > * + * {
+  margin-top: 1rem;
+}
+
+.story h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 2.5rem;
+}
+
+.story h2:first-child {
+  margin-top: 0;
+}
+
+.story p {
+  line-height: 1.7;
+  color: rgb(51 65 85);
+}
+
+.dark .story p {
+  color: rgb(203 213 225);
+}
+
+.story em {
+  font-style: italic;
+}

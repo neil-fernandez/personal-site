@@ -1,9 +1,9 @@
 ---
 title: MLOps Pipeline
 domain: Machine learning operations
-description: Automated a machine-learning pipeline for reproducibility.
-tech: [Python]
+description: Tracked a clustering experiment with MLflow for reproducible runs.
+tech: [Python, MLflow]
 category: ml-ai
 featured: false
 ---
-Built an MLOps pipeline to automate a machine-learning workflow.
+Set up MLflow experiment tracking, logging metrics and model runs for a KMeans clustering experiment.

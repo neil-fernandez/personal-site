@@ -6,7 +6,7 @@ interface Props {
 }
 
 const { project } = Astro.props;
-const { title, domain, tech, result, category } = project.data;
+const { title, domain, tech, result, category, hook } = project.data;
 
 const categoryLabels: Record<string, string> = {
   "ml-ai": "AI / ML",
@@ -17,7 +17,10 @@ const categoryLabels: Record<string, string> = {
 };
 ---
 
-<article class="rounded-xl border border-slate-200 p-5 transition-colors hover:border-brand-300 dark:border-slate-800">
+<a
+  href={`/projects/${project.slug}`}
+  class="group flex flex-col rounded-xl border border-slate-200 p-5 transition-colors hover:border-brand-300 dark:border-slate-800"
+>
   <div class="flex items-start justify-between gap-3">
     <h3 class="font-semibold">{title}</h3>
     <span
@@ -26,7 +29,11 @@ const categoryLabels: Record<string, string> = {
       {categoryLabels[category] ?? category}
     </span>
   </div>
-  <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{domain}</p>
+  {hook && <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">{hook}</p>}
+  {!hook && <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{domain}</p>}
   {result && <p class="mt-2 font-semibold text-brand-600">{result}</p>}
-  <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">{tech.join(" · ")}</p>
-</article>
+  <div class="mt-3 flex items-center justify-between gap-3">
+    <p class="text-xs text-slate-500 dark:text-slate-400">{tech.join(" · ")}</p>
+    <span class="shrink-0 text-sm text-brand-600 group-hover:underline">Read more &rarr;</span>
+  </div>
+</a>

@@ -1,0 +1,75 @@
+---
+import { getCollection, render } from "astro:content";
+import Layout from "../../layouts/Layout.astro";
+import Nav from "../../components/Nav.astro";
+import Footer from "../../components/Footer.astro";
+
+export async function getStaticPaths() {
+  const projects = await getCollection("projects");
+  return projects.map((project) => ({
+    params: { slug: project.slug },
+    props: { project },
+  }));
+}
+
+const { project } = Astro.props;
+const { Content } = await render(project);
+const { title, domain, tech, result, category } = project.data;
+
+const categoryLabels: Record<string, string> = {
+  "ml-ai": "AI / ML",
+  data: "Data",
+  systems: "Systems",
+  web: "Web",
+  fundamentals: "Fundamentals",
+};
+---
+
+<Layout title={`${title} — Neil Fernandez`} description={project.data.description}>
+  <Nav />
+  <main id="main" class="mx-auto w-full max-w-3xl flex-1 px-5 py-10">
+    <a
+      href="/#projects"
+      class="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline"
+    >
+      <span aria-hidden="true">&larr;</span> Back to projects
+    </a>
+
+    <div class="mt-6 flex items-start justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">{title}</h1>
+        <p class="mt-2 text-slate-500 dark:text-slate-400">{domain}</p>
+      </div>
+      <span
+        class="shrink-0 rounded-full border border-slate-200 px-2.5 py-0.5 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400"
+      >
+        {categoryLabels[category] ?? category}
+      </span>
+    </div>
+
+    <div class="mt-4 flex flex-wrap gap-2">
+      {
+        tech.map((item) => (
+          <span
+            class="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-300"
+          >
+            {item}
+          </span>
+        ))
+      }
+    </div>
+
+    {
+      result && (
+        <p class="mt-6 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 font-semibold text-brand-700 dark:border-brand-900 dark:bg-brand-950 dark:text-brand-300">
+          {result}
+        </p>
+      )
+    }
+
+    <article class="story mt-8">
+      <Content />
+    </article>
+  </main>
+  <Footer />
+</Layout>

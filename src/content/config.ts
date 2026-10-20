@@ -8,6 +8,7 @@ const projects = defineCollection({
     description: z.string(),
     tech: z.array(z.string()),
     result: z.string().optional(),
+    hook: z.string().optional(),
     category: z.enum(["ml-ai", "data", "systems", "web", "fundamentals"]).default("ml-ai"),
     featured: z.boolean().default(true),
     topics: z.array(z.string()).optional(),
