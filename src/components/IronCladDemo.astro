@@ -1,0 +1,125 @@
+---
+function faceSvg(hair: string, skin: string, shirt: string) {
+  return `<svg viewBox="0 0 100 100" class="h-full w-full" role="img" aria-hidden="true">
+    <path d="M14 100 q0 -24 36 -24 q36 0 36 24 z" fill="${shirt}"/>
+    <circle cx="50" cy="42" r="30" fill="${skin}"/>
+    <path d="M20 42 A30 30 0 0 1 80 42 Z" fill="${hair}"/>
+    <circle cx="40" cy="46" r="3.4" fill="#1e293b"/>
+    <circle cx="60" cy="46" r="3.4" fill="#1e293b"/>
+    <path d="M45 56 q5 5 10 0" stroke="#b45309" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+  </svg>`;
+}
+
+const probe = { hair: "#3f2a20", skin: "#f0c27d", shirt: "#1a7de0" };
+
+const gallery = [
+  { id: "JD", name: "Jordan D.", base: 0.95, correct: true, hair: "#3f2a20", skin: "#f0c27d", shirt: "#1a7de0" },
+  { id: "AL", name: "Alex L.", base: 0.42, correct: false, hair: "#111827", skin: "#f4c98b", shirt: "#16a34a" },
+  { id: "MK", name: "Maria K.", base: 0.38, correct: false, hair: "#d4a24e", skin: "#f6d0a0", shirt: "#ec4899" },
+  { id: "RP", name: "Robin P.", base: 0.35, correct: false, hair: "#b91c1c", skin: "#f1bf8a", shirt: "#7c3aed" },
+  { id: "SC", name: "Sam C.", base: 0.3, correct: false, hair: "#6b7280", skin: "#eab98a", shirt: "#ea580c" },
+];
+---
+
+<div class="my-8 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900/60">
+  <div class="flex items-center justify-between gap-3">
+    <span class="rounded-full bg-brand-600 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">Interactive demo</span>
+    <span class="text-xs text-slate-400 dark:text-slate-500">simulated matching (illustration only)</span>
+  </div>
+  <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">
+    A probe is matched against a gallery of identities. Drag <strong>blur</strong> and
+    <strong>low light</strong> to see the captured image degrade — and watch confidence fall.
+    Faces are stylised illustrations, not real people.
+  </p>
+
+  <div class="mt-4 grid gap-4 sm:grid-cols-2">
+    <label class="block text-sm">
+      <span class="font-medium">Blur: <span id="ic-blur-label" class="text-slate-500">0%</span></span>
+      <input id="ic-blur" type="range" min="0" max="100" step="1" value="0" class="mt-1 w-full accent-brand-600" />
+    </label>
+    <label class="block text-sm">
+      <span class="font-medium">Low light: <span id="ic-light-label" class="text-slate-500">0%</span></span>
+      <input id="ic-light" type="range" min="0" max="100" step="1" value="0" class="mt-1 w-full accent-brand-600" />
+    </label>
+  </div>
+
+  <div class="mt-4 flex items-center gap-4">
+    <div id="ic-probe" class="h-28 w-28 shrink-0 overflow-hidden rounded-xl ring-1 ring-slate-200 dark:ring-slate-700">
+      <div set:html={faceSvg(probe.hair, probe.skin, probe.shirt)} />
+    </div>
+    <div>
+      <p class="text-sm font-semibold">Probe identity</p>
+      <p class="text-xs text-slate-500 dark:text-slate-400">Jordan D. — as captured</p>
+      <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">The capture degrades with the sliders.</p>
+    </div>
+  </div>
+
+  <ul class="mt-4 space-y-2">
+    {
+      gallery.map((g) => (
+        <li class="ic-item flex items-center gap-3" data-base={g.base} data-correct={g.correct ? "1" : "0"}>
+          <div class="h-12 w-12 shrink-0 overflow-hidden rounded-lg ring-1 ring-slate-200 dark:ring-slate-700" set:html={faceSvg(g.hair, g.skin, g.shirt)} />
+          <div class="flex-1">
+            <div class="flex items-center justify-between text-sm">
+              <span class="font-medium">
+                {g.name}
+                {g.correct && <span class="ml-1 text-xs font-medium text-brand-600">· match</span>}
+              </span>
+              <span class="ic-pct text-xs text-slate-500 dark:text-slate-400">{Math.round(g.base * 100)}%</span>
+            </div>
+            <div class="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+              <div class={`ic-bar h-full rounded-full ${g.correct ? "bg-brand-600" : "bg-slate-400 dark:bg-slate-500"}`} style={`width:${(g.base * 100).toFixed(0)}%`}></div>
+            </div>
+          </div>
+        </li>
+      ))
+    }
+  </ul>
+
+  <p id="ic-status" class="mt-4 text-sm font-semibold text-emerald-600">High-confidence match</p>
+</div>
+
+<script>
+  const blur = document.getElementById("ic-blur");
+  const light = document.getElementById("ic-light");
+  const blurLabel = document.getElementById("ic-blur-label");
+  const lightLabel = document.getElementById("ic-light-label");
+  const probe = document.getElementById("ic-probe");
+  const items = [...document.querySelectorAll(".ic-item")];
+  const statusEl = document.getElementById("ic-status");
+
+  function update() {
+    const b = Number(blur.value);
+    const l = Number(light.value);
+    blurLabel.textContent = b + "%";
+    lightLabel.textContent = l + "%";
+
+    const blurPx = b * 0.08;
+    const brightPct = 100 - l * 0.8;
+    probe.style.filter = "blur(" + blurPx.toFixed(2) + "px) brightness(" + brightPct.toFixed(0) + "%)";
+
+    let correctConf = 0;
+    for (const el of items) {
+      const base = Number(el.dataset.base);
+      const conf = Math.max(0, base - b * 0.006 - l * 0.004);
+      el.querySelector(".ic-pct").textContent = Math.round(conf * 100) + "%";
+      el.querySelector(".ic-bar").style.width = (conf * 100).toFixed(0) + "%";
+      if (el.dataset.correct === "1") correctConf = conf;
+    }
+
+    if (correctConf > 0.7) {
+      statusEl.textContent = "High-confidence match";
+      statusEl.className = "mt-4 text-sm font-semibold text-emerald-600";
+    } else if (correctConf > 0.4) {
+      statusEl.textContent = "Reduced confidence";
+      statusEl.className = "mt-4 text-sm font-semibold text-amber-600";
+    } else {
+      statusEl.textContent = "Uncertain — identity may be missed";
+      statusEl.className = "mt-4 text-sm font-semibold text-red-600";
+    }
+  }
+
+  blur.addEventListener("input", update);
+  light.addEventListener("input", update);
+  update();
+</script>

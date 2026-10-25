@@ -1,6 +1,5 @@
 ---
-title: Python Assignments
-domain: Programming fundamentals
+title: Python Projects
 description: A fundamentals course covering data structures, algorithms, file I/O, object-oriented programming, concurrency, and small cryptography projects.
 tech: [Python]
 category: fundamentals

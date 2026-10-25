@@ -3,6 +3,11 @@ import { getCollection, render } from "astro:content";
 import Layout from "../../layouts/Layout.astro";
 import Nav from "../../components/Nav.astro";
 import Footer from "../../components/Footer.astro";
+import MovieMateDemo from "../../components/MovieMateDemo.astro";
+import SecureBankDemo from "../../components/SecureBankDemo.astro";
+import TechTrackDemo from "../../components/TechTrackDemo.astro";
+import IronCladDemo from "../../components/IronCladDemo.astro";
+import TextWaveDemo from "../../components/TextWaveDemo.astro";
 
 export async function getStaticPaths() {
   const projects = await getCollection("projects");
@@ -15,6 +20,15 @@ export async function getStaticPaths() {
 const { project } = Astro.props;
 const { Content } = await render(project);
 const { title, domain, tech, result, category } = project.data;
+
+const demos: Record<string, any> = {
+  moviemate: MovieMateDemo,
+  securebank: SecureBankDemo,
+  techtrack: TechTrackDemo,
+  ironclad: IronCladDemo,
+  textwave: TextWaveDemo,
+};
+const Demo = project.data.interactive ? demos[project.slug] : undefined;
 
 const categoryLabels: Record<string, string> = {
   "ml-ai": "AI / ML",
@@ -38,13 +52,24 @@ const categoryLabels: Record<string, string> = {
     <div class="mt-6 flex items-start justify-between gap-4">
       <div>
         <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">{title}</h1>
-        <p class="mt-2 text-slate-500 dark:text-slate-400">{domain}</p>
+        {
+          domain && <p class="mt-2 text-slate-500 dark:text-slate-400">{domain}</p>
+        }
       </div>
-      <span
-        class="shrink-0 rounded-full border border-slate-200 px-2.5 py-0.5 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400"
-      >
-        {categoryLabels[category] ?? category}
-      </span>
+      <div class="flex shrink-0 items-center gap-2">
+        <span
+          class="rounded-full border border-slate-200 px-2.5 py-0.5 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400"
+        >
+          {categoryLabels[category] ?? category}
+        </span>
+        {
+          project.data.interactive && (
+            <span class="rounded-full bg-brand-600 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
+              Interactive
+            </span>
+          )
+        }
+      </div>
     </div>
 
     <div class="mt-4 flex flex-wrap gap-2">
@@ -61,11 +86,13 @@ const categoryLabels: Record<string, string> = {
 
     {
       result && (
-        <p class="mt-6 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 font-semibold text-brand-700 dark:border-brand-900 dark:bg-brand-950 dark:text-brand-300">
+        <p class="mt-6 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 font-semibold text-brand-700 dark:border-brand-900 dark:bg-brand-900 dark:text-brand-300">
           {result}
         </p>
       )
     }
+
+    {Demo && <Demo />}
 
     <article class="story mt-8">
       <Content />

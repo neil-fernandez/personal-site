@@ -48,3 +48,91 @@ html {
 .story em {
   font-style: italic;
 }
+
+.story h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-top: 2rem;
+}
+
+.story img {
+  max-width: 100%;
+  height: auto;
+  margin: 1.5rem 0;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(226 232 240);
+}
+
+.dark .story img {
+  border-color: rgb(30 41 59);
+}
+
+.story blockquote {
+  margin-top: 1rem;
+  border-left: 3px solid #1a7de0;
+  padding-left: 1rem;
+  color: rgb(51 65 85);
+}
+
+.dark .story blockquote {
+  color: rgb(203 213 225);
+}
+
+.story blockquote p {
+  margin-top: 0.25rem;
+}
+
+.story ul,
+.story ol {
+  margin-top: 0.75rem;
+  padding-left: 1.25rem;
+  color: rgb(51 65 85);
+}
+
+.dark .story ul,
+.dark .story ol {
+  color: rgb(203 213 225);
+}
+
+.story li {
+  margin-top: 0.5rem;
+}
+
+.story table {
+  width: 100%;
+  margin-top: 1rem;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.story th,
+.story td {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid rgb(226 232 240);
+}
+
+.dark .story th,
+.dark .story td {
+  border-color: rgb(30 41 59);
+}
+
+.story th {
+  font-weight: 600;
+  color: rgb(15 23 42);
+}
+
+.dark .story th {
+  color: rgb(241 245 249);
+}
+
+.story code {
+  font-size: 0.875em;
+  background: rgb(241 245 249);
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.25rem;
+}
+
+.dark .story code {
+  background: rgb(30 41 59);
+}

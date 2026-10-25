@@ -1,0 +1,186 @@
+---
+const faq = [
+  { q: "How do I reset my password?", a: "Go to Settings → Security → Reset password. You'll receive an email link valid for 15 minutes." },
+  { q: "What is the refund policy?", a: "Refunds are available within 30 days of purchase for unused credits." },
+  { q: "How much does Acme Cloud cost?", a: "Plans start at $10 per month, with a free tier for small projects." },
+  { q: "How do I deploy an app?", a: "Connect your Git repository and Acme builds and serves your app on a global CDN." },
+  { q: "Is there a free tier?", a: "Yes — the free tier includes 100k requests per month and 1GB of storage." },
+  { q: "How do I contact support?", a: "Email support@acme.example or use the in-app chat, available 24/7." },
+  { q: "How is my data kept private?", a: "Data is encrypted in transit and at rest, and we never sell customer data." },
+  { q: "What is the uptime guarantee?", a: "Acme Cloud offers a 99.9% uptime SLA on paid plans." },
+];
+
+const samples = [
+  "How do I reset my password?",
+  "What is the refund policy?",
+  "How much does Acme Cloud cost?",
+  "How do I deploy an app?",
+  "Is there a free tier?",
+  "How is my data kept private?",
+];
+---
+
+<div class="my-8 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900/60">
+  <div class="flex items-center justify-between gap-3">
+    <span class="rounded-full bg-brand-600 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">Interactive demo</span>
+    <span class="text-xs text-slate-400 dark:text-slate-500">retrieval + templated answer</span>
+  </div>
+  <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">
+    Ask a question about "Acme Cloud" — a small sample knowledge base. TextWave retrieves the
+    closest passage and answers from it. The full system swaps the templated answer for a real
+    phi3 / qwen2.5 model.
+  </p>
+
+  <div class="mt-4 flex gap-2">
+    <input
+      id="tw-input"
+      type="text"
+      placeholder="e.g. How do I get a refund?"
+      class="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800"
+    />
+    <button id="tw-ask" type="button" class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700">
+      Ask
+    </button>
+  </div>
+
+  <div class="mt-3">
+    <p class="text-xs font-medium text-slate-400 dark:text-slate-500">Or tap a sample question:</p>
+    <div class="mt-2 flex flex-wrap gap-2">
+      {
+        samples.map((s) => (
+          <button
+            type="button"
+            data-q={s}
+            class="tw-sample rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600 transition-colors hover:border-brand-300 hover:text-brand-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+          >
+            {s}
+          </button>
+        ))
+      }
+    </div>
+  </div>
+
+  <div id="tw-output" class="mt-4"></div>
+</div>
+
+<script define:vars={{ faq, samples }}>
+  const STOP = new Set(["what","is","the","a","an","how","do","i","my","to","for","does","there","any","much","it","in","on","of","and","can","me","get","are","that","with","acme","cloud","you","your"]);
+  const input = document.getElementById("tw-input");
+  const askBtn = document.getElementById("tw-ask");
+  const output = document.getElementById("tw-output");
+
+  function stem(word) {
+    let w = word;
+    if (w.length > 4 && w.endsWith("ies")) w = w.slice(0, -3) + "y";
+    else if (w.length > 3 && w.endsWith("es")) w = w.slice(0, -2);
+    else if (w.length > 3 && w.endsWith("s") && !w.endsWith("ss")) w = w.slice(0, -1);
+    if (w.length > 5 && w.endsWith("ing")) w = w.slice(0, -3);
+    else if (w.length > 5 && w.endsWith("ed")) w = w.slice(0, -2);
+    return w;
+  }
+
+  function tokenize(text) {
+    return text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((t) => t.length > 1 && !STOP.has(t)).map(stem);
+  }
+
+  function bigrams(words) {
+    const s = new Set();
+    for (let i = 0; i < words.length - 1; i++) s.add(words[i] + "_" + words[i + 1]);
+    return s;
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  }
+
+  function highlight(text, words) {
+    const esc = escapeHtml(text);
+    if (!words.length) return esc;
+    const re = new RegExp("\\b(" + words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")\\b", "gi");
+    return esc.replace(re, '<mark class="rounded bg-amber-200 px-0.5 dark:bg-amber-500/40">$1</mark>');
+  }
+
+  function run() {
+    const q = input.value.trim();
+    output.innerHTML = "";
+    if (!q) return;
+
+    const words = tokenize(q);
+    if (words.length === 0) {
+      output.innerHTML = '<p class="text-sm text-slate-500 dark:text-slate-400">Try a fuller question, e.g. "How do I deploy an app?" or "What is the refund policy?".</p>';
+      return;
+    }
+
+    const bigs = bigrams(words);
+    const docBigrams = faq.map((f) => bigrams(tokenize(f.q + " " + f.a)));
+
+    const scored = faq
+      .map((f, idx) => {
+        const docWords = tokenize(f.q + " " + f.a);
+        const wordSet = new Set(docWords);
+        let wordHits = words.filter((w) => wordSet.has(w)).length;
+        let bigramHits = [...bigs].filter((b) => docBigrams[idx].has(b)).length;
+        const denom = words.length + bigs.size;
+        const ratio = denom ? (wordHits * 2 + bigramHits * 3) / (words.length * 2 + bigs.size * 3) : 0;
+        return { ...f, ratio, wordHits };
+      })
+      .sort((a, b) => b.ratio - a.ratio);
+
+    const relevant = scored.filter((s) => s.ratio >= 0.3);
+    const top = relevant[0];
+
+    if (!top) {
+      const block = document.createElement("div");
+      block.innerHTML =
+        '<p class="text-sm text-slate-600 dark:text-slate-300">No relevant passage found in the knowledge base.</p>' +
+        '<p class="mt-1 text-xs text-slate-400 dark:text-slate-500">The retriever honestly reports a miss instead of guessing. Its knowledge is only the small Acme Cloud FAQ here — tap one of the sample questions above, or ask about password reset, refunds, cost, deployment, the free tier, support, privacy, or uptime.</p>';
+      output.replaceChildren(block);
+      return;
+    }
+
+    const retrieved = document.createElement("div");
+    retrieved.className = "space-y-2";
+
+    const label = document.createElement("p");
+    label.className = "text-xs font-semibold uppercase tracking-wide text-slate-400";
+    label.textContent = "Retrieved passages";
+    retrieved.appendChild(label);
+
+    for (const f of relevant.slice(0, 3)) {
+      const pct = Math.round(f.ratio * 100);
+      const item = document.createElement("div");
+      item.className =
+        "rounded-lg border p-3 " +
+        (f === top ? "border-brand-300 bg-white dark:border-brand-700 dark:bg-slate-800" : "border-slate-200 bg-white/60 dark:border-slate-700 dark:bg-slate-800/50");
+      item.innerHTML =
+        '<div class="flex items-center justify-between gap-2">' +
+        '<p class="text-sm font-medium text-slate-700 dark:text-slate-200">' + highlight(f.q, words) + "</p>" +
+        '<span class="shrink-0 text-xs font-semibold text-brand-600">' + pct + "% match</span>" +
+        "</div>" +
+        '<p class="mt-1 text-xs text-slate-500 dark:text-slate-400">' + highlight(f.a, words) + "</p>";
+      retrieved.appendChild(item);
+    }
+
+    const answer = document.createElement("div");
+    answer.className = "mt-3 rounded-lg border border-brand-200 bg-brand-50 p-3 dark:border-brand-900 dark:bg-brand-900/30";
+    answer.innerHTML =
+      '<p class="text-xs font-semibold uppercase tracking-wide text-brand-600">Generated answer</p>' +
+      '<p class="mt-1 text-sm text-slate-700 dark:text-slate-200">' + escapeHtml(top.a) + "</p>";
+
+    const wrapper = document.createElement("div");
+    wrapper.append(retrieved, answer);
+    output.replaceChildren(wrapper);
+  }
+
+  askBtn.addEventListener("click", run);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") run();
+  });
+
+  document.querySelectorAll(".tw-sample").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      input.value = btn.dataset.q;
+      run();
+    });
+  });
+</script>

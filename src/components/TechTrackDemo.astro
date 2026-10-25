@@ -1,0 +1,217 @@
+---
+---
+
+<div class="my-8 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900/60">
+  <div class="flex items-center justify-between gap-3">
+    <span class="rounded-full bg-brand-600 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">Interactive demo</span>
+    <span class="text-xs text-slate-400 dark:text-slate-500">runs a real YOLOv8n in your browser</span>
+  </div>
+  <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">
+    Upload a photo and a real YOLOv8n object detector will run locally in your browser, drawing
+    bounding boxes and confidence scores. Then drag <strong>blur</strong> to watch detections
+    degrade — the exact robustness behaviour measured in the case study. (The production model was
+    trained on a custom logistics dataset; this demo uses the public COCO model.)
+  </p>
+
+  <div class="mt-4 flex flex-wrap items-center gap-2">
+    <label class="cursor-pointer rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700">
+      Choose image
+      <input id="tt-file" type="file" accept="image/*" class="hidden" />
+    </label>
+    <span id="tt-loading" class="hidden text-xs text-slate-500 dark:text-slate-400">Loading model…</span>
+  </div>
+
+  <div class="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700">
+    <canvas id="tt-view" class="block max-h-[28rem] w-full object-contain"></canvas>
+  </div>
+
+  <div class="mt-4">
+    <label class="block text-sm">
+      <span class="font-medium">Blur (stress test): <span id="tt-blur-label" class="text-slate-500">0%</span></span>
+      <input id="tt-blur" type="range" min="0" max="100" step="1" value="0" disabled class="mt-1 w-full accent-brand-600 disabled:opacity-50" />
+    </label>
+  </div>
+
+  <p id="tt-status" class="mt-3 text-sm text-slate-600 dark:text-slate-300">No image yet.</p>
+
+  <p class="mt-3 text-xs leading-relaxed text-slate-400 dark:text-slate-500">
+    Heads-up: a rising score here means the model is growing more confident, not more accurate.
+    Confidence isn't accuracy — under blur the detector's recall actually drops sharply (the case
+    study quantifies this), even while a lone box can report a higher percentage.
+  </p>
+</div>
+
+<script>
+  const COCO = ["person","bicycle","car","motorcycle","airplane","bus","train","truck","boat","traffic light","fire hydrant","stop sign","parking meter","bench","bird","cat","dog","horse","sheep","cow","elephant","bear","zebra","giraffe","backpack","umbrella","handbag","tie","suitcase","frisbee","skis","snowboard","sports ball","kite","baseball bat","baseball glove","skateboard","surfboard","tennis racket","bottle","wine glass","cup","fork","knife","spoon","bowl","banana","apple","sandwich","orange","broccoli","carrot","hot dog","pizza","donut","cake","chair","couch","potted plant","bed","dining table","toilet","tv","laptop","mouse","remote","keyboard","cell phone","microwave","oven","toaster","sink","refrigerator","book","clock","vase","scissors","teddy bear","hair drier","toothbrush"];
+
+  const fileInput = document.getElementById("tt-file");
+  const view = document.getElementById("tt-view");
+  const viewCtx = view.getContext("2d");
+  const blur = document.getElementById("tt-blur");
+  const blurLabel = document.getElementById("tt-blur-label");
+  const loading = document.getElementById("tt-loading");
+  const status = document.getElementById("tt-status");
+
+  const procCanvas = document.createElement("canvas");
+  const procCtx = procCanvas.getContext("2d");
+
+  let session = null;
+  let sourceImage = null;
+  let detecting = false;
+  let modelFailed = false;
+
+  async function getSession() {
+    if (session) return session;
+    const ort = await import("onnxruntime-web/wasm");
+    ort.env.wasm.wasmPaths = "/ort/";
+    ort.env.wasm.numThreads = 1;
+    session = await ort.InferenceSession.create("/models/yolov8n.onnx", { executionProviders: ["wasm"] });
+    return session;
+  }
+
+  function iou(a, b) {
+    const x1 = Math.max(a.x1, b.x1);
+    const y1 = Math.max(a.y1, b.y1);
+    const x2 = Math.min(a.x2, b.x2);
+    const y2 = Math.min(a.y2, b.y2);
+    const inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+    const areaA = (a.x2 - a.x1) * (a.y2 - a.y1);
+    const areaB = (b.x2 - b.x1) * (b.y2 - b.y1);
+    return inter / (areaA + areaB - inter + 1e-9);
+  }
+
+  function nms(boxes, thresh) {
+    const sorted = [...boxes].sort((a, b) => b.score - a.score);
+    const kept = [];
+    while (sorted.length) {
+      const best = sorted.shift();
+      kept.push(best);
+      for (let i = sorted.length - 1; i >= 0; i--) {
+        if (iou(best, sorted[i]) > thresh) sorted.splice(i, 1);
+      }
+    }
+    return kept;
+  }
+
+  function preprocess(img, blurPx) {
+    const w = img.naturalWidth || img.width;
+    const h = img.naturalHeight || img.height;
+    const scale = Math.min(640 / w, 640 / h);
+    const nw = Math.round(w * scale);
+    const nh = Math.round(h * scale);
+    const dx = (640 - nw) / 2;
+    const dy = (640 - nh) / 2;
+
+    procCanvas.width = 640;
+    procCanvas.height = 640;
+    procCtx.filter = blurPx > 0 ? "blur(" + blurPx + "px)" : "none";
+    procCtx.drawImage(img, dx, dy, nw, nh);
+    procCtx.filter = "none";
+
+    const data = procCtx.getImageData(0, 0, 640, 640).data;
+    const input = new Float32Array(3 * 640 * 640);
+    const plane = 640 * 640;
+    for (let i = 0; i < plane; i++) {
+      input[i] = data[i * 4] / 255;
+      input[plane + i] = data[i * 4 + 1] / 255;
+      input[2 * plane + i] = data[i * 4 + 2] / 255;
+    }
+    return { input, scale, dx, dy, w, h };
+  }
+
+  function decode(outputData, anchors, scale, dx, dy, confThresh) {
+    const boxes = [];
+    for (let a = 0; a < anchors; a++) {
+      let maxScore = 0;
+      let classId = -1;
+      for (let c = 0; c < 80; c++) {
+        const s = outputData[(4 + c) * anchors + a];
+        if (s > maxScore) {
+          maxScore = s;
+          classId = c;
+        }
+      }
+      if (maxScore < confThresh) continue;
+      const cx = outputData[0 * anchors + a];
+      const cy = outputData[1 * anchors + a];
+      const w = outputData[2 * anchors + a];
+      const h = outputData[3 * anchors + a];
+      const x1 = (cx - w / 2 - dx) / scale;
+      const y1 = (cy - h / 2 - dy) / scale;
+      const x2 = (cx + w / 2 - dx) / scale;
+      const y2 = (cy + h / 2 - dy) / scale;
+      boxes.push({ x1, y1, x2, y2, score: maxScore, classId });
+    }
+    return boxes;
+  }
+
+  async function detect(blurPx) {
+    if (!sourceImage || detecting) return;
+    if (modelFailed) return;
+    detecting = true;
+    loading.classList.remove("hidden");
+    status.textContent = "Detecting…";
+
+    try {
+      const s = await getSession();
+      const ort = await import("onnxruntime-web/wasm");
+      const { input, scale, dx, dy, w, h } = preprocess(sourceImage, blurPx);
+      const tensor = new ort.Tensor("float32", input, [1, 3, 640, 640]);
+      const results = await s.run({ images: tensor });
+      const out = results[s.outputNames[0]];
+      const boxes = nms(decode(out.data, out.dims[2], scale, dx, dy, 0.25), 0.45);
+
+      view.width = w;
+      view.height = h;
+      viewCtx.filter = blurPx > 0 ? "blur(" + blurPx + "px)" : "none";
+      viewCtx.drawImage(sourceImage, 0, 0, w, h);
+      viewCtx.filter = "none";
+
+      const palette = ["#16a34a", "#2563eb", "#ea580c", "#7c3aed", "#db2777", "#0d9488"];
+      for (const b of boxes) {
+        const color = palette[b.classId % palette.length];
+        viewCtx.strokeStyle = color;
+        viewCtx.lineWidth = Math.max(2, w / 400);
+        viewCtx.strokeRect(b.x1, b.y1, b.x2 - b.x1, b.y2 - b.y1);
+        const label = COCO[b.classId] + " " + Math.round(b.score * 100) + "%";
+        const fs = Math.max(12, w / 45);
+        viewCtx.font = "600 " + fs + "px system-ui, sans-serif";
+        const tw = viewCtx.measureText(label).width;
+        viewCtx.fillStyle = color;
+        viewCtx.fillRect(b.x1, Math.max(0, b.y1 - fs - 6), tw + 8, fs + 6);
+        viewCtx.fillStyle = "#ffffff";
+        viewCtx.fillText(label, b.x1 + 4, Math.max(fs, b.y1 - 6));
+      }
+
+      status.textContent =
+        "Detected " + boxes.length + " object" + (boxes.length === 1 ? "" : "s") + ".";
+    } catch (e) {
+      modelFailed = true;
+      status.textContent = "Could not load the detection model in this browser.";
+    } finally {
+      detecting = false;
+      loading.classList.add("hidden");
+    }
+  }
+
+  fileInput.addEventListener("change", () => {
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    const img = new Image();
+    img.onload = () => {
+      sourceImage = img;
+      blur.disabled = false;
+      detect(Number(blur.value) * 0.08);
+    };
+    img.src = URL.createObjectURL(file);
+  });
+
+  let blurTimer;
+  blur.addEventListener("input", () => {
+    blurLabel.textContent = blur.value + "%";
+    clearTimeout(blurTimer);
+    blurTimer = setTimeout(() => detect(Number(blur.value) * 0.08), 150);
+  });
+
+  blurLabel.textContent = "0%";
+</script>

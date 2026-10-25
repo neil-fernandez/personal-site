@@ -1,0 +1,48 @@
+export interface Movie {
+  title: string;
+  genres: string[];
+  popularity: number;
+}
+
+export const movies: Movie[] = [
+  { title: "The Shawshank Redemption", genres: ["Drama"], popularity: 9.3 },
+  { title: "The Godfather", genres: ["Crime", "Drama"], popularity: 9.2 },
+  { title: "The Dark Knight", genres: ["Action", "Crime", "Drama"], popularity: 9.0 },
+  { title: "Pulp Fiction", genres: ["Crime", "Drama"], popularity: 8.9 },
+  { title: "Fight Club", genres: ["Drama"], popularity: 8.8 },
+  { title: "Forrest Gump", genres: ["Drama", "Romance"], popularity: 8.8 },
+  { title: "Inception", genres: ["Sci-Fi", "Action", "Thriller"], popularity: 8.8 },
+  { title: "The Matrix", genres: ["Sci-Fi", "Action"], popularity: 8.7 },
+  { title: "Interstellar", genres: ["Sci-Fi", "Drama", "Adventure"], popularity: 8.6 },
+  { title: "The Silence of the Lambs", genres: ["Thriller", "Crime", "Drama"], popularity: 8.6 },
+  { title: "Seven", genres: ["Crime", "Thriller", "Drama"], popularity: 8.6 },
+  { title: "Spirited Away", genres: ["Animation", "Fantasy", "Adventure"], popularity: 8.6 },
+  { title: "Parasite", genres: ["Thriller", "Drama"], popularity: 8.5 },
+  { title: "Whiplash", genres: ["Drama", "Music"], popularity: 8.5 },
+  { title: "The Lion King", genres: ["Animation", "Family", "Drama"], popularity: 8.5 },
+  { title: "Gladiator", genres: ["Action", "Drama", "Adventure"], popularity: 8.5 },
+  { title: "Spider-Man: Into the Spider-Verse", genres: ["Animation", "Action", "Adventure"], popularity: 8.4 },
+  { title: "Avengers: Endgame", genres: ["Action", "Adventure", "Sci-Fi"], popularity: 8.4 },
+  { title: "Toy Story", genres: ["Animation", "Family", "Adventure"], popularity: 8.3 },
+  { title: "Finding Nemo", genres: ["Animation", "Family", "Adventure"], popularity: 8.2 },
+  { title: "Mad Max: Fury Road", genres: ["Action", "Adventure", "Sci-Fi"], popularity: 8.1 },
+  { title: "The Grand Budapest Hotel", genres: ["Comedy", "Drama"], popularity: 8.1 },
+  { title: "Blade Runner 2049", genres: ["Sci-Fi", "Drama", "Thriller"], popularity: 8.0 },
+  { title: "La La Land", genres: ["Romance", "Musical", "Drama"], popularity: 8.0 },
+  { title: "Guardians of the Galaxy", genres: ["Action", "Adventure", "Sci-Fi"], popularity: 8.0 },
+  { title: "Deadpool", genres: ["Action", "Comedy"], popularity: 8.0 },
+  { title: "Knives Out", genres: ["Mystery", "Comedy", "Crime"], popularity: 7.9 },
+  { title: "Iron Man", genres: ["Action", "Sci-Fi", "Adventure"], popularity: 7.9 },
+  { title: "Titanic", genres: ["Romance", "Drama"], popularity: 7.9 },
+  { title: "Get Out", genres: ["Horror", "Thriller"], popularity: 7.8 },
+  { title: "Avatar", genres: ["Sci-Fi", "Action", "Adventure"], popularity: 7.8 },
+  { title: "The Notebook", genres: ["Romance", "Drama"], popularity: 7.8 },
+  { title: "Pride and Prejudice", genres: ["Romance", "Drama"], popularity: 7.8 },
+  { title: "The Hangover", genres: ["Comedy"], popularity: 7.7 },
+  { title: "Superbad", genres: ["Comedy"], popularity: 7.6 },
+  { title: "A Quiet Place", genres: ["Horror", "Sci-Fi", "Thriller"], popularity: 7.5 },
+  { title: "The Conjuring", genres: ["Horror", "Mystery"], popularity: 7.5 },
+  { title: "Frozen", genres: ["Animation", "Family", "Musical"], popularity: 7.4 },
+  { title: "21 Jump Street", genres: ["Comedy", "Action"], popularity: 7.2 },
+  { title: "Bridesmaids", genres: ["Comedy", "Romance"], popularity: 6.8 },
+];

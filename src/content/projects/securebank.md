@@ -1,30 +1,61 @@
 ---
 title: SecureBank
 domain: Fraud detection
-description: Fraud-detection workflow over three gatekeeper data sources, with secure SQL handling.
+description: Fraud-detection workflow over three gatekeeper data sources with secure SQL handling.
 tech: [Python, pandas, SQL]
 result: SQLi defense
 category: ml-ai
 featured: true
+interactive: true
+order: 4
 hook: Can you catch fraud across three siloed datasets without leaking customer data?
 ---
 
-## The itch
+## How it works
 
-Three different "gatekeepers" each held a slice of the picture — customer details, transactions, and fraud labels — and none of them could be joined carelessly. The question: can you bring them together to find fraud without leaking sensitive data along the way?
+Fraud signals were spread across three separate sources — customer records, transactions, and
+fraud labels — that could not simply be joined together. SecureBank brings them into one
+detection workflow while keeping sensitive data safe.
 
-## The build
+![SecureBank fraud detection pipeline](/diagrams/securebank.svg)
 
-I combined the customer, transaction, and fraud datasets into a single detection workflow, with secure SQL (including injection defense) and raw sources deliberately kept out of version control.
+## Design decisions
 
-## The moment
+- **Secure by construction:** the join uses parameterised queries with SQL-injection defense, so
+  data can't be exfiltrated through query manipulation.
+- **Data hygiene:** raw data sources are kept out of version control; only the pipeline code is
+  shared.
+- **Access control:** the design separates who can read what, so sensitive fields are not exposed
+  to every stage of the pipeline.
 
-Security stopped being a checklist item. Protecting the data shaped the pipeline from the start — who can read what, and where raw files are allowed to live.
+## Building it, step by step
 
-## The result
+### 1. Ingest three siloed sources
 
-A fraud-detection workflow over the joined data with secure access controls and injection-hardened queries.
+Customer, transaction, and fraud labels each lived behind a separate "gatekeeper". The first step
+is loading all three consistently.
+
+> **Example:** a flagged transaction only means something once the customer record *and* the fraud
+> label are joined to it.
+
+### 2. Join without leaking data
+
+Instead of dumping everything into one open table, the join uses hardened SQL and keeps raw files
+out of git.
+
+### 3. Detect fraud across the join
+
+With the data joined safely, the workflow surfaces suspicious activity under access controls.
+
+## What I evaluated
+
+| Aspect | Result |
+| --- | --- |
+| Sources | customer · transactions · fraud |
+| Defence | SQL-injection hardening |
+| Hygiene | raw sources kept out of git |
 
 ## What I learned
 
-Privacy and security aren't afterthoughts you bolt on at the end — they're design constraints that shape how the whole system gets built.
+Privacy and security are not bolted on at the end — they are design constraints that shape the
+pipeline, the queries, and where data is allowed to live.

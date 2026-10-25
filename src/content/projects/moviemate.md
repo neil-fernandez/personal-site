@@ -6,25 +6,59 @@ tech: [Python, SVD, Flask]
 result: NDCG@10 0.775
 category: ml-ai
 featured: true
+interactive: true
+order: 2
 hook: How do you recommend movies to someone you know nothing about yet?
 ---
 
-## The itch
+## How it works
 
-Recommendations are easy when you have history. The hard part is the cold start: a brand-new user with no ratings, and no signal to lean on.
+MovieMate turns "films I liked" into "films I'll probably like next". The hard parts are the cold
+start — a user with no history — and not just repeating one genre.
 
-## The build
+![MovieMate recommendation pipeline](/diagrams/moviemate.svg)
 
-I split the data chronologically (70/15/15) so evaluation reflected the future, then compared SVD collaborative filtering against a simpler rule-based baseline, and added diversity reranking on top.
+## Design decisions
 
-## The moment
+- **Partitioning:** a chronological `70/15/15` split so evaluation reflects future
+  recommendations rather than random historical interpolation.
+- **Model:** collaborative SVD. It hit `NDCG@10 = 0.775` and the lowest RMSE, beating content-based
+  (`0.758`) and edging rule-based popularity (`0.771`) — a narrow margin that keeps popularity
+  useful as a prior.
+- **Diversity:** rerank with `alpha = 0.90`, lifting intra-list diversity from `0.648` to `0.666`
+  at almost no NDCG cost (`0.775` → `0.773`).
+- **Cold start:** a staged lifecycle — popularity prior at 0 ratings, then a gradual blend toward
+  collaborative filtering — rather than forcing one model to solve every stage.
 
-SVD reached NDCG@10 of 0.775 — but the margin over a plain popularity baseline was surprisingly narrow. A good reminder not to over-engineer before checking the simple thing.
+## Building it, step by step
 
-## The result
+### 1. Split the data so evaluation is honest
 
-SVD as the default, a popularity prior for cold start, and light diversity reranking (alpha 0.90) that raised diversity with almost no accuracy cost.
+Ratings are ordered by timestamp and split 70/15/15, so the model is scored on ratings made
+*after* everything it trained on.
+
+> **Example:** a user's early ratings train the model; their later ratings become the held-out set
+> to predict.
+
+### 2. Model taste with SVD
+
+The sparse user–item rating matrix is factorised into dense latent vectors for each user and film.
+
+### 3. Handle cold start and diversify
+
+New users fall back to a popularity prior, and a light diversity rerank spreads results across
+genres.
+
+## What I evaluated
+
+| Metric | Result |
+| --- | --- |
+| NDCG@10 | `0.775` |
+| Diversity alpha | `0.90` (ILD `0.666`) |
+| Cold start | staged popularity → collaborative |
+| Drift check | KS p = `0.808` (no retrain needed) |
 
 ## What I learned
 
-Don't force one model to solve every stage. Cold start and diversity deserve explicit treatment rather than assuming the base model handles them.
+One model shouldn't solve every stage. Evaluation should respect time, cold start is a lifecycle
+problem, and diversity deserves an explicit reranking step rather than being assumed.
