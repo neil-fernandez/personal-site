@@ -7,7 +7,7 @@ result: Top-5 retrieval
 category: ml-ai
 featured: true
 interactive: true
-order: 3
+order: 2
 hook: How good does face recognition stay when the photo is blurry or the light is bad?
 ---
 

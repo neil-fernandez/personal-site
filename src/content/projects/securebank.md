@@ -7,7 +7,7 @@ result: SQLi defense
 category: ml-ai
 featured: true
 interactive: true
-order: 4
+order: 5
 hook: Can you catch fraud across three siloed datasets without leaking customer data?
 ---
 

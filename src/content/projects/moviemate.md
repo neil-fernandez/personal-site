@@ -7,7 +7,7 @@ result: NDCG@10 0.775
 category: ml-ai
 featured: true
 interactive: true
-order: 2
+order: 3
 hook: How do you recommend movies to someone you know nothing about yet?
 ---
 

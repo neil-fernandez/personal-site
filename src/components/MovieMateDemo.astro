@@ -9,19 +9,22 @@ const sorted = [...movies].sort((a, b) => b.popularity - a.popularity);
     <span class="rounded-full bg-brand-600 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
       Interactive demo
     </span>
-    <button
-      id="mm-clear"
-      type="button"
-      class="text-xs font-medium text-brand-600 hover:underline"
-    >
-      Clear
-    </button>
+    <div class="flex items-center gap-3">
+      <span class="text-xs text-slate-400 dark:text-slate-500">trains real SVD in your browser</span>
+      <button
+        id="mm-clear"
+        type="button"
+        class="text-xs font-medium text-brand-600 hover:underline"
+      >
+        Clear
+      </button>
+    </div>
   </div>
 
   <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">
-    Pick a few films you like and MovieMate will suggest what to watch next. This demo uses a
-    small sample catalogue with popularity-aware similarity; the full system uses SVD
-    collaborative filtering.
+    Pick a few films you like and MovieMate will suggest what to watch next. When the page loads it
+    trains a real matrix-factorisation (SVD) recommender on a small sample rating matrix, then ranks
+    films by their latent similarity to your picks.
   </p>
 
   <div class="mt-5 border-t border-slate-200 pt-4 dark:border-slate-800">
@@ -62,6 +65,77 @@ const sorted = [...movies].sort((a, b) => b.popularity - a.popularity);
   const recsEl = document.getElementById("mm-recs");
   const emptyEl = document.getElementById("mm-empty");
   const clearBtn = document.getElementById("mm-clear");
+
+  // --- SVD collaborative filtering (biased matrix factorisation via SGD) ---
+  const N_USERS = 60;
+  const LATENT = 10;
+  const genreList = [...new Set(movies.flatMap((m) => m.genres))];
+
+  function seededRandom(seed) {
+    let s = seed >>> 0;
+    return () => {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return s / 4294967296;
+    };
+  }
+  const rng = seededRandom(20240918);
+
+  const ratings = [];
+  {
+    const prefs = Array.from({ length: N_USERS }, () => {
+      const p = {};
+      for (const g of genreList) p[g] = rng() * 2 - 1;
+      return p;
+    });
+    movies.forEach((m, i) => {
+      prefs.forEach((p, u) => {
+        if (rng() < 0.42) return;
+        let s = 0;
+        for (const g of m.genres) s += p[g];
+        const r = 2.8 + s * 1.3 + (rng() - 0.5) * 1.3;
+        ratings.push([u, i, Math.max(1, Math.min(5, Math.round(r * 10) / 10))]);
+      });
+    });
+  }
+
+  function trainSVD() {
+    const nu = N_USERS;
+    const ni = movies.length;
+    const k = LATENT;
+    const mu = ratings.reduce((a, r) => a + r[2], 0) / ratings.length;
+    const U = Array.from({ length: nu }, () => Array.from({ length: k }, () => rng() * 0.1 - 0.05));
+    const V = Array.from({ length: ni }, () => Array.from({ length: k }, () => rng() * 0.1 - 0.05));
+    const bu = new Array(nu).fill(0);
+    const bi = new Array(ni).fill(0);
+    let lr = 0.012;
+    const reg = 0.02;
+    for (let e = 0; e < 30; e++) {
+      for (let i = ratings.length - 1; i > 0; i--) {
+        const j = (rng() * (i + 1)) | 0;
+        const tmp = ratings[i];
+        ratings[i] = ratings[j];
+        ratings[j] = tmp;
+      }
+      for (const r of ratings) {
+        const u = r[0], i = r[1], rating = r[2];
+        let p = mu + bu[u] + bi[i];
+        const Uu = U[u], Vi = V[i];
+        for (let f = 0; f < k; f++) p += Uu[f] * Vi[f];
+        const err = rating - p;
+        bu[u] += lr * (err - reg * bu[u]);
+        bi[i] += lr * (err - reg * bi[i]);
+        for (let f = 0; f < k; f++) {
+          const uf = Uu[f], vf = Vi[f];
+          Uu[f] += lr * (err * vf - reg * uf);
+          Vi[f] += lr * (err * uf - reg * vf);
+        }
+      }
+      lr *= 0.96;
+    }
+    return V;
+  }
+
+  const V = trainSVD();
 
   const ICONS = {
     film: '<rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/>',
@@ -188,28 +262,44 @@ const sorted = [...movies].sort((a, b) => b.popularity - a.popularity);
       return;
     }
 
+    const idxOf = (title) => movies.findIndex((m) => m.title === title);
+    const userVec = new Array(LATENT).fill(0);
+    for (const title of selected) {
+      const i = idxOf(title);
+      if (i < 0) continue;
+      for (let f = 0; f < LATENT; f++) userVec[f] += V[i][f];
+    }
+    const uNorm = Math.hypot(...userVec) || 1;
+    for (let f = 0; f < LATENT; f++) userVec[f] /= uNorm;
+
     const likedGenres = new Set([...selected].flatMap((t) => genresOf(t)));
     const scored = movies
-      .filter((m) => !selected.has(m.title))
-      .map((movie) => {
+      .map((movie, i) => {
+        if (selected.has(movie.title)) return null;
+        let dot = 0, vNorm = 0;
+        for (let f = 0; f < LATENT; f++) {
+          dot += userVec[f] * V[i][f];
+          vNorm += V[i][f] * V[i][f];
+        }
+        const cosine = dot / (Math.sqrt(vNorm) || 1);
         const shared = movie.genres.filter((g) => likedGenres.has(g));
-        return { movie, shared, score: shared.length * 2 + movie.popularity / 10 };
+        return { movie, shared, cosine };
       })
-      .sort((a, b) => b.score - a.score);
+      .filter(Boolean)
+      .sort((a, b) => b.cosine - a.cosine);
 
-    const maxScore = scored.length ? scored[0].score : 1;
     const perGenre = new Map();
     const recs = [];
     for (const item of scored) {
       const genre = item.movie.genres[0];
       if ((perGenre.get(genre) ?? 0) >= 2) continue;
       perGenre.set(genre, (perGenre.get(genre) ?? 0) + 1);
-      const match = Math.min(99, Math.round(80 + (item.score / maxScore) * 19));
+      const match = Math.max(50, Math.min(99, Math.round(60 + item.cosine * 45)));
       recs.push({
         movie: item.movie,
         reason: item.shared.length
           ? "Because you like " + item.shared.join(", ")
-          : "Matches your taste",
+          : "Similar taste in the latent space",
         matchText: match + "% Match",
       });
       if (recs.length === 8) break;

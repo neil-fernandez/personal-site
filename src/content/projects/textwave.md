@@ -7,7 +7,7 @@ result: Hit@5 0.932
 category: ml-ai
 featured: true
 interactive: true
-order: 5
+order: 4
 hook: Can a tiny local model answer questions with real evidence instead of guessing?
 ---
 

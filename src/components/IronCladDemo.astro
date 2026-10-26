@@ -1,125 +1,424 @@
 ---
-function faceSvg(hair: string, skin: string, shirt: string) {
-  return `<svg viewBox="0 0 100 100" class="h-full w-full" role="img" aria-hidden="true">
-    <path d="M14 100 q0 -24 36 -24 q36 0 36 24 z" fill="${shirt}"/>
-    <circle cx="50" cy="42" r="30" fill="${skin}"/>
-    <path d="M20 42 A30 30 0 0 1 80 42 Z" fill="${hair}"/>
-    <circle cx="40" cy="46" r="3.4" fill="#1e293b"/>
-    <circle cx="60" cy="46" r="3.4" fill="#1e293b"/>
-    <path d="M45 56 q5 5 10 0" stroke="#b45309" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-  </svg>`;
-}
-
-const probe = { hair: "#3f2a20", skin: "#f0c27d", shirt: "#1a7de0" };
-
-const gallery = [
-  { id: "JD", name: "Jordan D.", base: 0.95, correct: true, hair: "#3f2a20", skin: "#f0c27d", shirt: "#1a7de0" },
-  { id: "AL", name: "Alex L.", base: 0.42, correct: false, hair: "#111827", skin: "#f4c98b", shirt: "#16a34a" },
-  { id: "MK", name: "Maria K.", base: 0.38, correct: false, hair: "#d4a24e", skin: "#f6d0a0", shirt: "#ec4899" },
-  { id: "RP", name: "Robin P.", base: 0.35, correct: false, hair: "#b91c1c", skin: "#f1bf8a", shirt: "#7c3aed" },
-  { id: "SC", name: "Sam C.", base: 0.3, correct: false, hair: "#6b7280", skin: "#eab98a", shirt: "#ea580c" },
-];
 ---
 
 <div class="my-8 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900/60">
   <div class="flex items-center justify-between gap-3">
     <span class="rounded-full bg-brand-600 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">Interactive demo</span>
-    <span class="text-xs text-slate-400 dark:text-slate-500">simulated matching (illustration only)</span>
+    <span class="text-xs text-slate-400 dark:text-slate-500">real face detection + recognition in-browser</span>
   </div>
   <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">
-    A probe is matched against a gallery of identities. Drag <strong>blur</strong> and
-    <strong>low light</strong> to see the captured image degrade — and watch confidence fall.
-    Faces are stylised illustrations, not real people.
+    A real face detector (SCRFD) and recognition model (MobileFaceNet) run locally in your browser.
+    Enrol a face, then see whether a second face matches it. Nothing is uploaded — all processing
+    happens on your device.
   </p>
 
-  <div class="mt-4 grid gap-4 sm:grid-cols-2">
-    <label class="block text-sm">
-      <span class="font-medium">Blur: <span id="ic-blur-label" class="text-slate-500">0%</span></span>
-      <input id="ic-blur" type="range" min="0" max="100" step="1" value="0" class="mt-1 w-full accent-brand-600" />
-    </label>
-    <label class="block text-sm">
-      <span class="font-medium">Low light: <span id="ic-light-label" class="text-slate-500">0%</span></span>
-      <input id="ic-light" type="range" min="0" max="100" step="1" value="0" class="mt-1 w-full accent-brand-600" />
-    </label>
+  <div class="mt-4 flex flex-wrap items-center gap-2">
+    <button id="ic-cam" type="button" class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700">
+      Enable camera
+    </button>
+    <button id="ic-enroll" type="button" disabled class="rounded-lg border border-brand-300 px-4 py-2 text-sm font-semibold text-brand-700 transition-colors hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-brand-700 dark:text-brand-300">
+      Enrol this face
+    </button>
+    <span id="ic-loading" class="hidden text-xs text-slate-500 dark:text-slate-400">Loading models…</span>
   </div>
 
-  <div class="mt-4 flex items-center gap-4">
-    <div id="ic-probe" class="h-28 w-28 shrink-0 overflow-hidden rounded-xl ring-1 ring-slate-200 dark:ring-slate-700">
-      <div set:html={faceSvg(probe.hair, probe.skin, probe.shirt)} />
-    </div>
-    <div>
-      <p class="text-sm font-semibold">Probe identity</p>
-      <p class="text-xs text-slate-500 dark:text-slate-400">Jordan D. — as captured</p>
-      <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">The capture degrades with the sliders.</p>
-    </div>
+  <div class="relative mt-4 hidden overflow-hidden rounded-xl border border-slate-200 bg-black dark:border-slate-700" id="ic-stage">
+    <video id="ic-video" playsinline muted class="block w-full"></video>
+    <canvas id="ic-canvas" class="absolute inset-0 block h-full w-full"></canvas>
   </div>
 
-  <ul class="mt-4 space-y-2">
-    {
-      gallery.map((g) => (
-        <li class="ic-item flex items-center gap-3" data-base={g.base} data-correct={g.correct ? "1" : "0"}>
-          <div class="h-12 w-12 shrink-0 overflow-hidden rounded-lg ring-1 ring-slate-200 dark:ring-slate-700" set:html={faceSvg(g.hair, g.skin, g.shirt)} />
-          <div class="flex-1">
-            <div class="flex items-center justify-between text-sm">
-              <span class="font-medium">
-                {g.name}
-                {g.correct && <span class="ml-1 text-xs font-medium text-brand-600">· match</span>}
-              </span>
-              <span class="ic-pct text-xs text-slate-500 dark:text-slate-400">{Math.round(g.base * 100)}%</span>
-            </div>
-            <div class="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-              <div class={`ic-bar h-full rounded-full ${g.correct ? "bg-brand-600" : "bg-slate-400 dark:bg-slate-500"}`} style={`width:${(g.base * 100).toFixed(0)}%`}></div>
-            </div>
-          </div>
-        </li>
-      ))
-    }
-  </ul>
+  <p id="ic-status" class="mt-3 text-sm text-slate-600 dark:text-slate-300">No camera or photo yet.</p>
 
-  <p id="ic-status" class="mt-4 text-sm font-semibold text-emerald-600">High-confidence match</p>
+  <div class="mt-5 border-t border-slate-200 pt-4 dark:border-slate-800">
+    <p class="text-xs font-medium text-slate-400 dark:text-slate-500">No camera? Compare two photos instead:</p>
+    <div class="mt-2 flex flex-wrap gap-2">
+      <label class="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 transition-colors hover:border-brand-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+        Reference photo
+        <input id="ic-ref" type="file" accept="image/*" class="hidden" />
+      </label>
+      <label class="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 transition-colors hover:border-brand-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+        Probe photo
+        <input id="ic-probe" type="file" accept="image/*" class="hidden" />
+      </label>
+    </div>
+    <p id="ic-upload-result" class="mt-2 text-sm text-slate-600 dark:text-slate-300"></p>
+  </div>
 </div>
 
 <script>
-  const blur = document.getElementById("ic-blur");
-  const light = document.getElementById("ic-light");
-  const blurLabel = document.getElementById("ic-blur-label");
-  const lightLabel = document.getElementById("ic-light-label");
-  const probe = document.getElementById("ic-probe");
-  const items = [...document.querySelectorAll(".ic-item")];
-  const statusEl = document.getElementById("ic-status");
+  const camBtn = document.getElementById("ic-cam");
+  const enrollBtn = document.getElementById("ic-enroll");
+  const loading = document.getElementById("ic-loading");
+  const stage = document.getElementById("ic-stage");
+  const video = document.getElementById("ic-video");
+  const canvas = document.getElementById("ic-canvas");
+  const status = document.getElementById("ic-status");
+  const refInput = document.getElementById("ic-ref");
+  const probeInput = document.getElementById("ic-probe");
+  const uploadResult = document.getElementById("ic-upload-result");
 
-  function update() {
-    const b = Number(blur.value);
-    const l = Number(light.value);
-    blurLabel.textContent = b + "%";
-    lightLabel.textContent = l + "%";
+  const INPUT = 640;
+  const STRIDES = [8, 16, 32];
+  const SRC = [
+    [38.2946, 51.6963],
+    [73.5318, 51.5014],
+    [56.0252, 71.7366],
+    [41.5493, 92.3655],
+    [70.7299, 92.2041],
+  ];
 
-    const blurPx = b * 0.08;
-    const brightPct = 100 - l * 0.8;
-    probe.style.filter = "blur(" + blurPx.toFixed(2) + "px) brightness(" + brightPct.toFixed(0) + "%)";
+  let ort = null;
+  let detSession = null;
+  let recSession = null;
+  let loadingPromise = null;
+  let referenceEmb = null;
+  let stream = null;
+  let detecting = false;
+  const procCanvas = document.createElement("canvas");
 
-    let correctConf = 0;
-    for (const el of items) {
-      const base = Number(el.dataset.base);
-      const conf = Math.max(0, base - b * 0.006 - l * 0.004);
-      el.querySelector(".ic-pct").textContent = Math.round(conf * 100) + "%";
-      el.querySelector(".ic-bar").style.width = (conf * 100).toFixed(0) + "%";
-      if (el.dataset.correct === "1") correctConf = conf;
+  const centersCache = STRIDES.map((s) => {
+    const h = INPUT / s, w = INPUT / s;
+    const c = [];
+    for (let i = 0; i < h; i++)
+      for (let j = 0; j < w; j++) {
+        const cx = j * s, cy = i * s;
+        c.push([cx, cy], [cx, cy]);
+      }
+    return c;
+  });
+
+  async function loadModels() {
+    if (loadingPromise) return loadingPromise;
+    loadingPromise = (async () => {
+      const m = await import("onnxruntime-web/wasm");
+      m.env.wasm.wasmPaths = "/ort/";
+      m.env.wasm.numThreads = 1;
+      const [d, r] = await Promise.all([
+        m.InferenceSession.create("/models/faces/detection.onnx", { executionProviders: ["wasm"] }),
+        m.InferenceSession.create("/models/faces/recognition.onnx", { executionProviders: ["wasm"] }),
+      ]);
+      detSession = d;
+      recSession = r;
+      ort = m;
+      return m;
+    })();
+    return loadingPromise;
+  }
+
+  function nms(dets, thresh) {
+    const order = dets.map((_, i) => i).sort((a, b) => dets[b].score - dets[a].score);
+    const keep = [];
+    while (order.length) {
+      const i = order.shift();
+      keep.push(i);
+      const a = dets[i].box;
+      for (let k = order.length - 1; k >= 0; k--) {
+        const b = dets[order[k]].box;
+        const x1 = Math.max(a[0], b[0]), y1 = Math.max(a[1], b[1]);
+        const x2 = Math.min(a[2], b[2]), y2 = Math.min(a[3], b[3]);
+        const inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+        const areaA = (a[2] - a[0]) * (a[3] - a[1]);
+        const areaB = (b[2] - b[0]) * (b[3] - b[1]);
+        if (inter / (areaA + areaB - inter + 1e-9) > thresh) order.splice(k, 1);
+      }
     }
+    return keep.map((i) => dets[i]);
+  }
 
-    if (correctConf > 0.7) {
-      statusEl.textContent = "High-confidence match";
-      statusEl.className = "mt-4 text-sm font-semibold text-emerald-600";
-    } else if (correctConf > 0.4) {
-      statusEl.textContent = "Reduced confidence";
-      statusEl.className = "mt-4 text-sm font-semibold text-amber-600";
-    } else {
-      statusEl.textContent = "Uncertain — identity may be missed";
-      statusEl.className = "mt-4 text-sm font-semibold text-red-600";
+  function toNCHW(canvas) {
+    const ctx = canvas.getContext("2d");
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    const H = canvas.height, W = canvas.width;
+    const plane = H * W;
+    const blob = new Float32Array(3 * plane);
+    for (let i = 0; i < plane; i++) {
+      blob[i] = (data[i * 4] - 127.5) / 128;
+      blob[plane + i] = (data[i * 4 + 1] - 127.5) / 128;
+      blob[2 * plane + i] = (data[i * 4 + 2] - 127.5) / 128;
+    }
+    return blob;
+  }
+
+  function solveSimilarity(srcPts, dstPts) {
+    const A = [], b = [];
+    for (let i = 0; i < srcPts.length; i++) {
+      const sx = srcPts[i][0], sy = srcPts[i][1];
+      const dx = dstPts[i][0], dy = dstPts[i][1];
+      A.push([sx, -sy, 1, 0]); b.push(dx);
+      A.push([sy, sx, 0, 1]); b.push(dy);
+    }
+    const AtA = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
+    const Atb = [0, 0, 0, 0];
+    for (let r = 0; r < A.length; r++) {
+      for (let i = 0; i < 4; i++) {
+        Atb[i] += A[r][i] * b[r];
+        for (let j = 0; j < 4; j++) AtA[i][j] += A[r][i] * A[r][j];
+      }
+    }
+    const n = 4;
+    for (let col = 0; col < n; col++) {
+      let pivot = col;
+      for (let r = col + 1; r < n; r++) if (Math.abs(AtA[r][col]) > Math.abs(AtA[pivot][col])) pivot = r;
+      [AtA[col], AtA[pivot]] = [AtA[pivot], AtA[col]];
+      [Atb[col], Atb[pivot]] = [Atb[pivot], Atb[col]];
+      const d = AtA[col][col] || 1e-9;
+      for (let c = col; c < n; c++) AtA[col][c] /= d;
+      Atb[col] /= d;
+      for (let r = 0; r < n; r++) {
+        if (r === col) continue;
+        const f = AtA[r][col];
+        for (let c = col; c < n; c++) AtA[r][c] -= f * AtA[col][c];
+        Atb[r] -= f * Atb[col];
+      }
+    }
+    return Atb;
+  }
+
+  function alignFace(srcCtx, srcW, srcH, lms) {
+    const [a, b, tx, ty] = solveSimilarity(lms, SRC);
+    const det = a * a + b * b;
+    const dst = 112;
+    const src = srcCtx.getImageData(0, 0, srcW, srcH).data;
+    const out = new Uint8ClampedArray(dst * dst * 4);
+    for (let v = 0; v < dst; v++) {
+      for (let u = 0; u < dst; u++) {
+        const ix = (a * (u - tx) + b * (v - ty)) / det;
+        const iy = (-b * (u - tx) + a * (v - ty)) / det;
+        const o = (v * dst + u) * 4;
+        if (ix < 0 || iy < 0 || ix >= srcW - 1 || iy >= srcH - 1) {
+          out[o] = out[o + 1] = out[o + 2] = 0;
+          out[o + 3] = 255;
+          continue;
+        }
+        const x0 = ix | 0, y0 = iy | 0;
+        const fx = ix - x0, fy = iy - y0;
+        const i00 = (y0 * srcW + x0) * 4, i10 = i00 + 4, i01 = i00 + srcW * 4, i11 = i01 + 4;
+        for (let c = 0; c < 3; c++) {
+          const top = src[i00 + c] * (1 - fx) + src[i10 + c] * fx;
+          const bot = src[i01 + c] * (1 - fx) + src[i11 + c] * fx;
+          out[o + c] = top * (1 - fy) + bot * fy;
+        }
+        out[o + 3] = 255;
+      }
+    }
+    const c = document.createElement("canvas");
+    c.width = dst; c.height = dst;
+    c.getContext("2d").putImageData(new ImageData(out, dst, dst), 0, 0);
+    return c;
+  }
+
+  async function embedFace(srcCtx, srcW, srcH, face) {
+    const aligned = alignFace(srcCtx, srcW, srcH, face.lms);
+    const blob = toNCHW(aligned);
+    const res = await recSession.run({ "input.1": new ort.Tensor("float32", blob, [1, 3, 112, 112]) });
+    const emb = res[recSession.outputNames[0]].data;
+    let norm = 0;
+    for (let i = 0; i < emb.length; i++) norm += emb[i] * emb[i];
+    norm = Math.sqrt(norm) || 1;
+    const out = new Float32Array(emb.length);
+    for (let i = 0; i < emb.length; i++) out[i] = emb[i] / norm;
+    return out;
+  }
+
+  function cosine(a, b) {
+    let s = 0;
+    for (let i = 0; i < a.length; i++) s += a[i] * b[i];
+    return s;
+  }
+
+  function detectFaces(srcCtx, srcW, srcH) {
+    const ratio = srcH / srcW;
+    let nw, nh;
+    if (ratio > 1) { nh = INPUT; nw = Math.round(nh / ratio); }
+    else { nw = INPUT; nh = Math.round(nw * ratio); }
+    const scale = nh / srcH;
+
+    const pad = document.createElement("canvas");
+    pad.width = INPUT; pad.height = INPUT;
+    const pctx = pad.getContext("2d");
+    pctx.fillStyle = "#000";
+    pctx.fillRect(0, 0, INPUT, INPUT);
+    pctx.drawImage(srcCtx.canvas, 0, 0, srcW, srcH, 0, 0, nw, nh);
+
+    const blob = toNCHW(pad);
+    return detSession.run({ "input.1": new ort.Tensor("float32", blob, [1, 3, INPUT, INPUT]) }).then((res) => {
+      const names = detSession.outputNames;
+      const dets = [];
+      for (let si = 0; si < 3; si++) {
+        const scores = res[names[si]].data;
+        const bboxes = res[names[si + 3]].data;
+        const kpss = res[names[si + 6]].data;
+        const centers = centersCache[si];
+        const stride = STRIDES[si];
+        for (let a = 0; a < centers.length; a++) {
+          if (scores[a] < 0.5) continue;
+          const cx = centers[a][0], cy = centers[a][1];
+          const box = [
+            (cx - bboxes[a * 4] * stride) / scale,
+            (cy - bboxes[a * 4 + 1] * stride) / scale,
+            (cx + bboxes[a * 4 + 2] * stride) / scale,
+            (cy + bboxes[a * 4 + 3] * stride) / scale,
+          ];
+          const lms = [];
+          for (let k = 0; k < 5; k++) {
+            lms.push([(cx + kpss[a * 10 + k * 2] * stride) / scale, (cy + kpss[a * 10 + k * 2 + 1] * stride) / scale]);
+          }
+          dets.push({ score: scores[a], box, lms });
+        }
+      }
+      return nms(dets, 0.4);
+    });
+  }
+
+  function drawBoxes(ctx, faces, w, h) {
+    ctx.clearRect(0, 0, w, h);
+    for (const f of faces) {
+      const [x1, y1, x2, y2] = f.box;
+      ctx.strokeStyle = referenceEmb ? "#16a34a" : "#1a7de0";
+      ctx.lineWidth = Math.max(2, w / 300);
+      ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
     }
   }
 
-  blur.addEventListener("input", update);
-  light.addEventListener("input", update);
-  update();
+  async function processImage(img) {
+    const srcCtx = document.createElement("canvas");
+    srcCtx.width = img.naturalWidth || img.width;
+    srcCtx.height = img.naturalHeight || img.height;
+    const ctx = srcCtx.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+    const sw = srcCtx.width, sh = srcCtx.height;
+
+    const faces = await detectFaces(ctx, sw, sh);
+
+    if (!faces.length) {
+      status.textContent = referenceEmb ? "No face detected." : "No face detected yet.";
+      return null;
+    }
+    const emb = await embedFace(ctx, sw, sh, faces[0]);
+    return { emb, face: faces[0] };
+  }
+
+  function showSimilarity(emb) {
+    const sim = cosine(referenceEmb, emb);
+    const pct = Math.round(sim * 100);
+    let text, cls;
+    if (sim > 0.5) { text = "Same person — " + pct + "% match"; cls = "text-emerald-600"; }
+    else if (sim > 0.3) { text = "Uncertain — " + pct + "% match"; cls = "text-amber-600"; }
+    else { text = "Different person — " + pct + "% match"; cls = "text-red-600"; }
+    status.textContent = text;
+    status.className = "mt-3 text-sm font-semibold " + cls;
+  }
+
+  // ---- camera ----
+  camBtn.addEventListener("click", async () => {
+    if (stream) {
+      stream.getTracks().forEach((t) => t.stop());
+      stream = null;
+      stage.classList.add("hidden");
+      camBtn.textContent = "Enable camera";
+      return;
+    }
+    loading.classList.remove("hidden");
+    status.textContent = "Loading models…";
+    status.className = "mt-3 text-sm text-slate-600 dark:text-slate-300";
+    try {
+      await loadModels();
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } } });
+      video.srcObject = stream;
+      await video.play();
+      stage.classList.remove("hidden");
+      camBtn.textContent = "Disable camera";
+      status.textContent = "Camera on. Position your face, then enrol.";
+      loop();
+    } catch (e) {
+      console.error(e);
+      status.textContent = "Could not access the camera (it needs HTTPS and permission). Use the photo upload below instead.";
+    } finally {
+      loading.classList.add("hidden");
+    }
+  });
+
+  async function loop() {
+    if (!stream) return;
+    if (detecting) { requestAnimationFrame(loop); return; }
+    detecting = true;
+    const w = video.videoWidth, h = video.videoHeight;
+    if (w) {
+      procCanvas.width = w;
+      procCanvas.height = h;
+      const pctx = procCanvas.getContext("2d");
+      pctx.drawImage(video, 0, 0, w, h);
+      try {
+        const faces = await detectFaces(pctx, w, h);
+        canvas.width = w;
+        canvas.height = h;
+        drawBoxes(canvas.getContext("2d"), faces, w, h);
+        if (faces.length) {
+          enrollBtn.disabled = false;
+          status.textContent = referenceEmb ? "Face detected — matching…" : "Face detected. Tap \"Enrol this face\" to set it as your reference.";
+          status.className = "mt-3 text-sm text-slate-600 dark:text-slate-300";
+          if (referenceEmb) {
+            const emb = await embedFace(pctx, w, h, faces[0]);
+            showSimilarity(emb);
+          }
+        } else {
+          if (!referenceEmb) enrollBtn.disabled = true;
+          status.textContent = "No face detected.";
+        }
+      } catch (e) {
+        /* skip frame */
+      }
+    }
+    detecting = false;
+    setTimeout(loop, 150);
+  }
+
+  enrollBtn.addEventListener("click", async () => {
+    const w = video.videoWidth, h = video.videoHeight;
+    if (!w) return;
+    procCanvas.width = w;
+    procCanvas.height = h;
+    const pctx = procCanvas.getContext("2d");
+    pctx.drawImage(video, 0, 0, w, h);
+    const faces = await detectFaces(pctx, w, h);
+    if (!faces.length) return;
+    referenceEmb = await embedFace(pctx, w, h, faces[0]);
+    status.textContent = "Reference enrolled. Now show any face to compare.";
+    status.className = "mt-3 text-sm font-semibold text-brand-600";
+  });
+
+  // ---- upload fallback ----
+  async function readImage(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  let refImg = null;
+  refInput.addEventListener("change", async () => {
+    refImg = await readImage(refInput.files[0]);
+    uploadResult.textContent = "Reference photo loaded.";
+  });
+  probeInput.addEventListener("change", async () => {
+    if (!refImg) { uploadResult.textContent = "Load a reference photo first."; return; }
+    loading.classList.remove("hidden");
+    uploadResult.textContent = "Running…";
+    try {
+      await loadModels();
+      const ref = await processImage(refImg);
+      const probeImg = await readImage(probeInput.files[0]);
+      const probe = await processImage(probeImg);
+      if (!ref || !probe) { uploadResult.textContent = "Couldn't detect a face in one of the photos."; return; }
+      const sim = cosine(ref.emb, probe.emb);
+      uploadResult.textContent = (sim > 0.5 ? "Same person" : "Different person") + " — " + Math.round(sim * 100) + "% match";
+    } catch (e) {
+      console.error(e);
+      uploadResult.textContent = "Could not load the face models in this browser.";
+    } finally {
+      loading.classList.add("hidden");
+    }
+  });
 </script>
