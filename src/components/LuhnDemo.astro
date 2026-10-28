@@ -1,0 +1,133 @@
+---
+---
+
+<div class="my-8 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900/60">
+  <div class="flex items-center justify-between gap-3">
+    <span class="rounded-full bg-brand-600 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
+      Interactive demo
+    </span>
+    <span class="text-xs text-slate-400 dark:text-slate-500">the Luhn checksum, live</span>
+  </div>
+
+  <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">
+    Card numbers are checked with the Luhn algorithm: from the right, double every second digit,
+    subtract 9 when a doubled digit exceeds 9, and sum everything. A valid number makes the total a
+    multiple of 10. Type a number and watch each digit contribute.
+  </p>
+
+  <div class="mt-4 flex gap-2">
+    <input
+      id="luhn-input"
+      type="text"
+      inputmode="numeric"
+      maxlength="19"
+      placeholder="e.g. 4532 0141 1512 2210"
+      class="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800"
+    />
+    <button id="luhn-reset" type="button" class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-brand-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+      Clear
+    </button>
+  </div>
+
+  <div id="luhn-result" class="mt-3"></div>
+
+  <div class="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800">
+    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+      Find a missing check digit
+    </p>
+    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+      Enter the first 15 digits and it will compute the final digit that makes the number valid.
+    </p>
+    <div class="mt-2 flex gap-2">
+      <input id="luhn-prefix" type="text" inputmode="numeric" maxlength="18" placeholder="e.g. 4000 0012 3456 78" class="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800" />
+      <button id="luhn-generate" type="button" class="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-brand-700">
+        Compute
+      </button>
+    </div>
+    <p id="luhn-gen-result" class="mt-2 text-sm"></p>
+  </div>
+</div>
+
+<script>
+  const input = document.getElementById("luhn-input");
+  const resultEl = document.getElementById("luhn-result");
+  const resetBtn = document.getElementById("luhn-reset");
+  const prefixInput = document.getElementById("luhn-prefix");
+  const genBtn = document.getElementById("luhn-generate");
+  const genResult = document.getElementById("luhn-gen-result");
+
+  function digits(str) {
+    return str.replace(/\D/g, "");
+  }
+
+  function luhnBreakdown(num) {
+    const steps = [];
+    let sum = 0;
+    let double = false;
+    for (let i = num.length - 1; i >= 0; i--) {
+      let d = Number(num[i]);
+      if (double) {
+        const doubled = d * 2;
+        d = doubled > 9 ? doubled - 9 : doubled;
+        steps.push({ digit: Number(num[i]), doubled: true, value: d });
+      } else {
+        steps.push({ digit: Number(num[i]), doubled: false, value: d });
+      }
+      sum += d;
+      double = !double;
+    }
+    return { steps: steps.reverse(), sum, valid: sum % 10 === 0 };
+  }
+
+  function render() {
+    const num = digits(input.value);
+    if (num.length === 0) {
+      resultEl.innerHTML = "";
+      return;
+    }
+
+    const { steps, sum, valid } = luhnBreakdown(num);
+    const chips = steps
+      .map((s) => {
+        const label = s.doubled ? s.digit + "→" + s.value : String(s.digit);
+        const cls = s.doubled ? "bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300" : "bg-white text-slate-600 dark:bg-slate-800 dark:text-slate-300";
+        return '<span class="rounded-md border border-slate-200 px-1.5 py-0.5 text-xs ' + cls + ' dark:border-slate-700">' + label + "</span>";
+      })
+      .join("");
+
+    const badge = valid
+      ? '<span class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Valid</span>'
+      : '<span class="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">Invalid</span>';
+
+    resultEl.innerHTML =
+      '<div class="flex items-center justify-between gap-2">' +
+      '<p class="text-xs text-slate-500 dark:text-slate-400">Doubled digits are shown as <span class="font-medium">d→value</span>.</p>' +
+      badge +
+      "</div>" +
+      '<div class="mt-2 flex flex-wrap gap-1">' + chips + "</div>" +
+      '<p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Sum = <span class="font-semibold">' + sum + "</span>, which is " +
+      (valid ? "a multiple of 10." : "not a multiple of 10 (remainder " + (sum % 10) + ").") +
+      "</p>";
+  }
+
+  function computeCheckDigit(prefix) {
+    if (prefix.length === 0) return null;
+    const withZero = prefix + "0";
+    const { sum } = luhnBreakdown(withZero);
+    return (10 - (sum % 10)) % 10;
+  }
+
+  input.addEventListener("input", render);
+  resetBtn.addEventListener("click", () => {
+    input.value = "";
+    resultEl.innerHTML = "";
+  });
+
+  genBtn.addEventListener("click", () => {
+    const prefix = digits(prefixInput.value);
+    const check = computeCheckDigit(prefix);
+    genResult.textContent = check === null
+      ? "Enter some digits first."
+      : "Check digit: " + check + "  →  full number: " + prefix + check;
+  });
+</script>

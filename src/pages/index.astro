@@ -2,6 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import Nav from "../components/Nav.astro";
 import ProjectCard from "../components/ProjectCard.astro";
+import StepsFlow from "../components/StepsFlow.astro";
 import Footer from "../components/Footer.astro";
 import { getCollection } from "astro:content";
 
@@ -9,7 +10,10 @@ const allProjects = await getCollection("projects");
 const featured = allProjects
   .filter((p) => p.data.featured)
   .sort((a, b) => (a.data.order ?? 999) - (b.data.order ?? 999));
-const coursework = allProjects.filter((p) => !p.data.featured);
+const pythonProjects = allProjects
+  .filter((p) => p.data.group === "python")
+  .sort((a, b) => (a.data.order ?? 999) - (b.data.order ?? 999));
+const coursework = allProjects.filter((p) => !p.data.featured && p.data.group !== "python");
 
 const interests = [
   "Building robots and autonomous systems",
@@ -97,6 +101,17 @@ const skillGroups = [
       </div>
     </section>
 
+    <section id="python-projects" class="py-8">
+      <h2 class="text-2xl font-semibold">Python projects</h2>
+      <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+        Interactive mini-projects from my Python fundamentals coursework — each one runs entirely in
+        your browser.
+      </p>
+      <div class="mt-6 grid gap-5 sm:grid-cols-2">
+        {pythonProjects.map((project) => <ProjectCard project={project} />)}
+      </div>
+    </section>
+
     <section id="coursework" class="py-8">
       <h2 class="text-2xl font-semibold">Core Capabilities</h2>
       <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
@@ -115,6 +130,9 @@ const skillGroups = [
                 }
               </div>
               <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">{project.data.description}</p>
+              {
+                project.data.steps && <StepsFlow steps={project.data.steps} />
+              }
               {
                 project.data.topics && (
                   <ul class="mt-2 list-inside list-disc text-xs text-slate-500 dark:text-slate-400">

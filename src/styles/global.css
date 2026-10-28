@@ -4,6 +4,27 @@
 
 :root {
   color-scheme: light dark;
+  --diagram-box: #ffffff;
+  --diagram-box-stroke: #cbd5e1;
+  --diagram-title: #0f172a;
+  --diagram-subtitle: #64748b;
+  --diagram-arrow: #94a3b8;
+  --diagram-accent: #1a7de0;
+  --diagram-accent-stroke: #1764b5;
+  --diagram-accent-title: #ffffff;
+  --diagram-accent-subtitle: #cfe6ff;
+}
+
+.dark {
+  --diagram-box: #1e293b;
+  --diagram-box-stroke: #334155;
+  --diagram-title: #f1f5f9;
+  --diagram-subtitle: #94a3b8;
+  --diagram-arrow: #64748b;
+  --diagram-accent: #1a7de0;
+  --diagram-accent-stroke: #2f9cff;
+  --diagram-accent-title: #ffffff;
+  --diagram-accent-subtitle: #bfdbfe;
 }
 
 html {
@@ -65,6 +86,13 @@ html {
 
 .dark .story img {
   border-color: rgb(30 41 59);
+}
+
+.story svg.diagram {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 1.5rem 0;
 }
 
 .story blockquote {

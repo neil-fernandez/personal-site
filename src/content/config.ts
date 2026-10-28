@@ -14,6 +14,8 @@ const projects = defineCollection({
     interactive: z.boolean().default(false),
     order: z.number().optional(),
     topics: z.array(z.string()).optional(),
+    steps: z.array(z.string()).optional(),
+    group: z.string().optional(),
     repo: z.string().url().optional(),
   }),
 });

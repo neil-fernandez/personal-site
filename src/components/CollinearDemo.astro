@@ -1,0 +1,158 @@
+---
+---
+
+<div class="my-8 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900/60">
+  <div class="flex items-center justify-between gap-3">
+    <span class="rounded-full bg-brand-600 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
+      Interactive demo
+    </span>
+    <span class="text-xs text-slate-400 dark:text-slate-500">finds collinear points in your browser</span>
+  </div>
+
+  <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">
+    Click to scatter points, then ask the demo to find every set of three or more points that lie on
+    the same straight line. Each line is drawn through its extremes and its points are highlighted.
+  </p>
+
+  <div class="mt-4 flex flex-wrap gap-2">
+    <button id="cl-find" type="button" class="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-brand-700">
+      Find collinear lines
+    </button>
+    <button id="cl-add" type="button" class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-brand-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+      Add 25 random points
+    </button>
+    <button id="cl-clear" type="button" class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-brand-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+      Clear
+    </button>
+  </div>
+
+  <div class="mt-4 rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-800">
+    <svg id="cl-svg" viewBox="0 0 400 300" class="block h-auto w-full cursor-crosshair" role="img" aria-label="Collinear points plot">
+      <rect x="0" y="0" width="400" height="300" fill="transparent" />
+    </svg>
+  </div>
+
+  <p id="cl-status" class="mt-2 text-xs text-slate-400 dark:text-slate-500">
+    Click in the plot to add points, then press "Find collinear lines".
+  </p>
+</div>
+
+<script>
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.getElementById("cl-svg");
+  const findBtn = document.getElementById("cl-find");
+  const addBtn = document.getElementById("cl-add");
+  const clearBtn = document.getElementById("cl-clear");
+  const statusEl = document.getElementById("cl-status");
+
+  let points = [];
+  let lines = [];
+
+  function el(name, attrs) {
+    const node = document.createElementNS(NS, name);
+    for (const k in attrs) node.setAttribute(k, attrs[k]);
+    return node;
+  }
+
+  function toViewBox(evt) {
+    const r = svg.getBoundingClientRect();
+    return {
+      x: ((evt.clientX - r.left) / r.width) * 400,
+      y: ((evt.clientY - r.top) / r.height) * 300,
+    };
+  }
+
+  function render() {
+    svg.replaceChildren();
+    svg.appendChild(el("rect", { x: 0, y: 0, width: 400, height: 300, fill: "transparent" }));
+
+    for (const set of lines) {
+      let minX = Infinity;
+      let maxX = -Infinity;
+      let minY = Infinity;
+      let maxY = -Infinity;
+      for (const i of set) {
+        minX = Math.min(minX, points[i].x);
+        maxX = Math.max(maxX, points[i].x);
+        minY = Math.min(minY, points[i].y);
+        maxY = Math.max(maxY, points[i].y);
+      }
+      const a = set.find((i) => points[i].x === minX) ?? set[0];
+      const b = set.find((i) => points[i].x === maxX) ?? set[set.length - 1];
+      const vertical = Math.abs(points[b].x - points[a].x) < 1e-6;
+      const x1 = vertical ? points[a].x : points[a].x - 20;
+      const y1 = vertical ? minY - 20 : points[a].y - (vertical ? 0 : (points[b].y - points[a].y) / (points[b].x - points[a].x) * 20);
+      const x2 = vertical ? points[b].x : points[b].x + 20;
+      const y2 = vertical ? maxY + 20 : points[b].y + (points[b].y - points[a].y) / (points[b].x - points[a].x) * 20;
+      svg.appendChild(el("line", { x1, y1, x2, y2, stroke: "#f43f5e", "stroke-width": 2, opacity: 0.8 }));
+    }
+
+    const highlighted = new Set(lines.flat());
+    points.forEach((p, i) => {
+      const onLine = highlighted.has(i);
+      svg.appendChild(el("circle", {
+        cx: p.x,
+        cy: p.y,
+        r: onLine ? 5 : 4,
+        fill: onLine ? "#f43f5e" : "#1a7de0",
+      }));
+    });
+  }
+
+  function onLine(a, b, p, eps) {
+    const cross = (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
+    return Math.abs(cross) < eps;
+  }
+
+  function findLines() {
+    lines = [];
+    const seen = new Set();
+    const n = points.length;
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const set = [];
+        for (let k = 0; k < n; k++) {
+          if (onLine(points[i], points[j], points[k], 1.5)) set.push(k);
+        }
+        if (set.length >= 3) {
+          const key = [...set].sort((a, b) => a - b).join(",");
+          if (!seen.has(key)) {
+            seen.add(key);
+            lines.push(set);
+          }
+        }
+      }
+    }
+    statusEl.textContent = lines.length
+      ? "Found " + lines.length + " line" + (lines.length === 1 ? "" : "s") + " with 3 or more points."
+      : "No 3+ collinear points found. Add more points (or use random ones).";
+    render();
+  }
+
+  svg.addEventListener("click", (evt) => {
+    const p = toViewBox(evt);
+    if (p.x < 6 || p.x > 394 || p.y < 6 || p.y > 294) return;
+    points.push(p);
+    render();
+  });
+
+  addBtn.addEventListener("click", () => {
+    for (let i = 0; i < 25; i++) {
+      points.push({ x: 8 + Math.random() * 384, y: 8 + Math.random() * 284 });
+    }
+    lines = [];
+    statusEl.textContent = "Added 25 random points. Press \"Find collinear lines\".";
+    render();
+  });
+
+  findBtn.addEventListener("click", findLines);
+
+  clearBtn.addEventListener("click", () => {
+    points = [];
+    lines = [];
+    statusEl.textContent = "Click in the plot to add points, then press \"Find collinear lines\".";
+    render();
+  });
+
+  addBtn.click();
+</script>

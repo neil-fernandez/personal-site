@@ -8,6 +8,12 @@ import SecureBankDemo from "../../components/SecureBankDemo.astro";
 import TechTrackDemo from "../../components/TechTrackDemo.astro";
 import IronCladDemo from "../../components/IronCladDemo.astro";
 import TextWaveDemo from "../../components/TextWaveDemo.astro";
+import StepsFlow from "../../components/StepsFlow.astro";
+import KMeansDemo from "../../components/KMeansDemo.astro";
+import LfsrDemo from "../../components/LfsrDemo.astro";
+import CollinearDemo from "../../components/CollinearDemo.astro";
+import LuhnDemo from "../../components/LuhnDemo.astro";
+import FrequencyDemo from "../../components/FrequencyDemo.astro";
 
 export async function getStaticPaths() {
   const projects = await getCollection("projects");
@@ -19,7 +25,7 @@ export async function getStaticPaths() {
 
 const { project } = Astro.props;
 const { Content } = await render(project);
-const { title, domain, tech, result, category } = project.data;
+const { title, domain, tech, result, category, steps } = project.data;
 
 const demos: Record<string, any> = {
   moviemate: MovieMateDemo,
@@ -27,6 +33,11 @@ const demos: Record<string, any> = {
   techtrack: TechTrackDemo,
   ironclad: IronCladDemo,
   textwave: TextWaveDemo,
+  "python-kmeans": KMeansDemo,
+  "python-lfsr": LfsrDemo,
+  "python-collinear": CollinearDemo,
+  "python-luhn": LuhnDemo,
+  "python-frequency": FrequencyDemo,
 };
 const Demo = project.data.interactive ? demos[project.slug] : undefined;
 
@@ -95,6 +106,7 @@ const categoryLabels: Record<string, string> = {
     {Demo && <Demo />}
 
     <article class="story mt-8">
+      {steps && steps.length > 0 && <StepsFlow steps={steps} />}
       <Content />
     </article>
   </main>

@@ -5,5 +5,10 @@ description: Scraped and normalized a programme dataset, fixing degree-level cla
 tech: [Python, BeautifulSoup]
 category: data
 featured: false
+steps:
+  - Fetch pages
+  - Parse HTML
+  - Clean fields
+  - Normalise values
 ---
 Extracted a programme dataset from the web and normalized it, including correcting degree-level noise in the source data.
