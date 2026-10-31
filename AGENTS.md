@@ -1,6 +1,8 @@
 # Personal Site — Project Memory
 
-Personal landing page for Neil Fernandez, hosted at neilf.org. The plan lives in `BLUEPRINT.md`; treat it as the source of truth for scope and order.
+Personal landing page for Neil Fernandez, hosted at neilf.org. The plan lives in `BLUEPRINT.md`; the
+**live state (done → next order + recovery prompt) lives in `STATUS.md`** — read it first. Treat
+`BLUEPRINT.md` as the source of truth for scope and order.
 
 ## Operating rules
 
